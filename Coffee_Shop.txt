@@ -1,0 +1,7 @@
+Coffee shop system:
+  -add iteams for sell
+  -edit iteams like deleting or update
+  -sell iteams
+  -users,login, sigin up
+  -settings[]
+  -reports[excel files]

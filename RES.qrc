@@ -1,0 +1,15 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource>
+	<file>RES/logo.png</file>
+	<file>RES/coffee-settings.png</file>
+	    	<file>RES/themes.png</file>
+	         <file>RES/visual-data.png</file>
+	<file>RES/coffee-menu.png</file>
+	<file>RES/cofeehouse.png</file>
+	<file>RES/money.png</file>
+	<file>RES/money-bag.png</file>
+	<file>RES/rating.png</file>	
+    </qresource>
+</RCC>
+	
