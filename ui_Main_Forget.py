@@ -88,8 +88,8 @@ class Ui_Main_Forget(object):
         x = msg.exec_()
      def sendpass(self):
         try:
-            from_email = "abdulhadieleyyub17@gmail.com"
-            password = "uiug pwpq bfix ndnm"
+            from_email = ""#Your gmail for stmp need actived
+            password = ""   #the password the stmp code from email gmail
             Email=self.lineEdit.text()
             mydb = mycon.connect(host="localhost", user="root", password="", database="coffe_shop")
             mycursor = mydb.cursor()
