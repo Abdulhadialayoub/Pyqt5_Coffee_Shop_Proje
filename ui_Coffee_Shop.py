@@ -341,23 +341,36 @@ class MainApp(QMainWindow, ui):
             pro_price = self.label_9.text()  # QLabel for product price
             qty = self.spinBox.value()  # QSpinBox for quantity
             order_date = datetime.date.today()
+
             # Check if any of the fields are empty
             if not pro_id or not pro_name or not pro_type or not pro_price or qty <= 0:
                 QMessageBox.warning(self, "Input Error", "All fields are required.")
                 return
+
             # Validate that pro_price is a number
             try:
                 pro_price = float(pro_price)
             except ValueError:
                 QMessageBox.warning(self, "Input Error", "Price must be a valid number.")
                 return
+
             # Calculate the total price
             total_price = qty * pro_price
+
             # Connect to the database
             self.db = mycon.connect(host='localhost', user='root', password='', database='coffe_shop')
             self.cur = self.db.cursor()
             # Disable autocommit mode
             self.db.autocommit = False
+
+            # Check for any existing orders
+            self.cur.execute("SELECT COUNT(*) FROM orders")
+            existing_orders_count = self.cur.fetchone()[0]
+            if existing_orders_count > 0:
+                QMessageBox.warning(self, "Order Error",
+                                    "There is already an existing order. Please complete the existing order before placing a new one.")
+                return
+
             # Retrieve the highest customer_id from the orders table
             self.cur.execute("SELECT MAX(customer_id) FROM orders")
             result = self.cur.fetchone()
@@ -365,6 +378,7 @@ class MainApp(QMainWindow, ui):
                 custID = result[0] + 1
             else:
                 custID = 1
+
             # Retrieve current stock from products table
             self.cur.execute("SELECT pro_stock FROM products WHERE pro_id = %s", (pro_id,))
             result = self.cur.fetchone()
@@ -372,34 +386,40 @@ class MainApp(QMainWindow, ui):
                 QMessageBox.warning(self, "Input Error", "Product ID not found.")
                 self.db.rollback()
                 return
+
             current_stock = result[0]
+
             # Check if there is enough stock
             if current_stock < qty:
                 QMessageBox.warning(self, "Stock Error", "Not enough stock available.")
                 self.db.rollback()
                 return
+
             # Update the product stock
             new_stock = current_stock - qty
             self.cur.execute("UPDATE products SET pro_stock = %s WHERE pro_id = %s", (new_stock, pro_id))
 
             # Insert the order into the database with the new customer_id
             sql = """
-            INSERT INTO orders (customer_id, pro_id, pro_name, pro_type, pro_price, order_date,qty, total_price)
+            INSERT INTO orders (customer_id, pro_id, pro_name, pro_type, pro_price, order_date, qty, total_price)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """
-            values = (custID, pro_id, pro_name, pro_type, pro_price, order_date,qty, total_price)
+            values = (custID, pro_id, pro_name, pro_type, pro_price, order_date, qty, total_price)
             self.cur.execute(sql, values)
+
             # Commit the transaction
             self.db.commit()
+
             # Provide user feedback
             QMessageBox.information(self, "Success", f"Order placed successfully. Total Price: {total_price}")
             self.Show_Stock_in_Order()
             self.Show_Order_Table()
+
         except mycon.Error as err:
             QMessageBox.critical(self, "Database Error", f"Error: {err}")
             self.db.rollback()  # Rollback in case of error
 
-    def Delete_Order(self):
+  def Delete_Order(self):
         try:
             # Retrieve selected row
             selected_items = self.tableWidget_3.selectedItems()
@@ -421,6 +441,21 @@ class MainApp(QMainWindow, ui):
             # Connect to the database
             self.db = mycon.connect(host='localhost', user='root', password='', database='coffe_shop')
             self.cur = self.db.cursor()
+            # Retrieve order details to update stock
+            self.cur.execute("SELECT pro_id, qty FROM orders WHERE customer_id = %s", (order_id,))
+            order_details = self.cur.fetchone()
+            if not order_details:
+                QMessageBox.warning(self, "Error", "Order not found.")
+                return
+            pro_id, qty = order_details
+            # Update the product stock
+            self.cur.execute("SELECT pro_stock FROM products WHERE pro_id = %s", (pro_id,))
+            product_stock = self.cur.fetchone()
+            if not product_stock:
+                QMessageBox.warning(self, "Error", "Product not found.")
+                return
+            new_stock = product_stock[0] + qty
+            self.cur.execute("UPDATE products SET pro_stock = %s WHERE pro_id = %s", (new_stock, pro_id))
             # Delete the order
             self.cur.execute("DELETE FROM orders WHERE customer_id = %s", (order_id,))
             # Commit the transaction
